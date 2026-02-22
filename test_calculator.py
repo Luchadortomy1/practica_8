@@ -7,13 +7,23 @@ import pytest
 # runner executes tests from a different working directory.
 HERE = pathlib.Path(__file__).resolve()
 PROJECT_ROOT = None
+
+# First, search upward from the test file location.
 for parent in [HERE.parent, *HERE.parents]:
     if (parent / "src" / "main.py").exists():
         PROJECT_ROOT = parent
         break
 
+# If not found (e.g., when the runner relocates the test file), search from CWD.
 if PROJECT_ROOT is None:
-    raise RuntimeError("Could not locate src/main.py relative to tests")
+    cwd = pathlib.Path.cwd()
+    for parent in [cwd, *cwd.parents]:
+        if (parent / "src" / "main.py").exists():
+            PROJECT_ROOT = parent
+            break
+
+if PROJECT_ROOT is None:
+    raise RuntimeError("Could not locate src/main.py relative to tests or cwd")
 
 # Ensure the project root is first on sys.path so `import src.main` works.
 sys.path.insert(0, str(PROJECT_ROOT))
