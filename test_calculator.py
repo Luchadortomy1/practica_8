@@ -31,6 +31,15 @@ def _find_src_dir() -> pathlib.Path | None:
     for main_path in candidates:
         if main_path.exists():
             return main_path.parent
+
+    # As a last resort, search recursively under likely roots
+    search_roots = []
+    if workspace:
+        search_roots.append(workspace)
+    search_roots.append(cwd)
+    for root in search_roots:
+        for main_path in root.rglob("src/main.py"):
+            return main_path.parent
     return None
 
 SRC_DIR = _find_src_dir()
