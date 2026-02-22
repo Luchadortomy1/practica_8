@@ -1,22 +1,31 @@
-import os
 import sys
 import pathlib
 import importlib.util
 import pytest
 
-# Ensure imports work whether tests run from repo root or inside src
-ROOT = pathlib.Path(__file__).resolve().parent
-REPO_ROOT = ROOT if (ROOT / "src").exists() else ROOT.parent
-sys.path.insert(0, str(REPO_ROOT))
+# Robustly locate the project root that contains src/main.py, even if the
+# runner executes tests from a different working directory.
+HERE = pathlib.Path(__file__).resolve()
+PROJECT_ROOT = None
+for parent in [HERE.parent, *HERE.parents]:
+    if (parent / "src" / "main.py").exists():
+        PROJECT_ROOT = parent
+        break
+
+if PROJECT_ROOT is None:
+    raise RuntimeError("Could not locate src/main.py relative to tests")
+
+# Ensure the project root is first on sys.path so `import src.main` works.
+sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
     from src.main import Calculator
 except ModuleNotFoundError:
-    # Fallback: load directly from file if src is not on sys.path in CI
-    candidate = (REPO_ROOT / "src" / "main.py").resolve()
-    spec = importlib.util.spec_from_file_location("src.main", candidate)
+    # Absolute import failed; load directly from the located file.
+    main_path = PROJECT_ROOT / "src" / "main.py"
+    spec = importlib.util.spec_from_file_location("src.main", main_path)
     module = importlib.util.module_from_spec(spec)
-    assert spec and spec.loader  # mypy/pyright guard
+    assert spec and spec.loader  # guard for type checkers
     spec.loader.exec_module(module)
     Calculator = module.Calculator
 
