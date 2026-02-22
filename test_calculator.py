@@ -4,27 +4,36 @@ import pathlib
 import importlib.util
 import pytest
 
-# Try a list of candidate src directories and use the first that exists.
-HERE = pathlib.Path(__file__).resolve()
-cwd = pathlib.Path.cwd()
-workspace = pathlib.Path(os.environ.get("GITHUB_WORKSPACE", "")).resolve() if os.environ.get("GITHUB_WORKSPACE") else None
+def _find_src_dir() -> pathlib.Path | None:
+    here = pathlib.Path(__file__).resolve()
+    cwd = pathlib.Path.cwd()
+    workspace_env = os.environ.get("GITHUB_WORKSPACE")
+    workspace = pathlib.Path(workspace_env).resolve() if workspace_env else None
 
-src_candidates = []
+    bases = []
+    bases.extend([here.parent, *here.parents])
+    bases.extend([cwd, *cwd.parents])
+    if workspace:
+        bases.extend([workspace, *workspace.parents])
 
-# From the test file location and its parents
-for parent in [HERE.parent, *HERE.parents]:
-    src_candidates.append(parent / "src")
+    seen: set[str] = set()
+    candidates: list[pathlib.Path] = []
 
-# From the working directory and its parents
-for parent in [cwd, *cwd.parents]:
-    src_candidates.append(parent / "src")
+    for base in bases:
+        key = str(base)
+        if key in seen:
+            continue
+        seen.add(key)
+        candidates.append(base / "src" / "main.py")
+        # Also consider nested repo folders one level down
+        candidates.extend(base.glob("*/src/main.py"))
 
-# From GitHub workspace if provided
-if workspace:
-    for parent in [workspace, *workspace.parents]:
-        src_candidates.append(parent / "src")
+    for main_path in candidates:
+        if main_path.exists():
+            return main_path.parent
+    return None
 
-SRC_DIR = next((p for p in src_candidates if (p / "main.py").exists()), None)
+SRC_DIR = _find_src_dir()
 
 if SRC_DIR is None:
     raise RuntimeError("Could not locate src/main.py for imports")
