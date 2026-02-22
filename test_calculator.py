@@ -1,3 +1,4 @@
+import os
 import sys
 import pathlib
 import importlib.util
@@ -6,6 +7,7 @@ import pytest
 # Try a list of candidate src directories and use the first that exists.
 HERE = pathlib.Path(__file__).resolve()
 cwd = pathlib.Path.cwd()
+workspace = pathlib.Path(os.environ.get("GITHUB_WORKSPACE", "")).resolve() if os.environ.get("GITHUB_WORKSPACE") else None
 
 src_candidates = []
 
@@ -16,6 +18,11 @@ for parent in [HERE.parent, *HERE.parents]:
 # From the working directory and its parents
 for parent in [cwd, *cwd.parents]:
     src_candidates.append(parent / "src")
+
+# From GitHub workspace if provided
+if workspace:
+    for parent in [workspace, *workspace.parents]:
+        src_candidates.append(parent / "src")
 
 SRC_DIR = next((p for p in src_candidates if (p / "main.py").exists()), None)
 
