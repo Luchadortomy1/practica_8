@@ -1,6 +1,7 @@
 import os
 import sys
 import pathlib
+import importlib.util
 import pytest
 
 # Ensure imports work whether tests run from repo root or inside src
@@ -8,7 +9,16 @@ ROOT = pathlib.Path(__file__).resolve().parent
 REPO_ROOT = ROOT if (ROOT / "src").exists() else ROOT.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from src.main import Calculator
+try:
+    from src.main import Calculator
+except ModuleNotFoundError:
+    # Fallback: load directly from file if src is not on sys.path in CI
+    candidate = (REPO_ROOT / "src" / "main.py").resolve()
+    spec = importlib.util.spec_from_file_location("src.main", candidate)
+    module = importlib.util.module_from_spec(spec)
+    assert spec and spec.loader  # mypy/pyright guard
+    spec.loader.exec_module(module)
+    Calculator = module.Calculator
 
 
 def test_sum():
