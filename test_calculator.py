@@ -5,11 +5,8 @@ import pytest
 
 # Ensure imports work whether tests run from repo root or inside src
 ROOT = pathlib.Path(__file__).resolve().parent
-SRC_DIR = ROOT / "src"
-if SRC_DIR.exists():
-    sys.path.insert(0, str(SRC_DIR))
-else:
-    sys.path.insert(0, str(ROOT))
+REPO_ROOT = ROOT if (ROOT / "src").exists() else ROOT.parent
+sys.path.insert(0, str(REPO_ROOT))
 
 from src.main import Calculator
 
