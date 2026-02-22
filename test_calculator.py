@@ -1,4 +1,16 @@
+import os
+import sys
+import pathlib
 import pytest
+
+# Ensure imports work whether tests run from repo root or inside src
+ROOT = pathlib.Path(__file__).resolve().parent
+SRC_DIR = ROOT / "src"
+if SRC_DIR.exists():
+    sys.path.insert(0, str(SRC_DIR))
+else:
+    sys.path.insert(0, str(ROOT))
+
 from src.main import Calculator
 
 
