@@ -3,36 +3,33 @@ import pathlib
 import importlib.util
 import pytest
 
-# Robustly locate the project root that contains src/main.py, even if the
-# runner executes tests from a different working directory.
+# Try a list of candidate src directories and use the first that exists.
 HERE = pathlib.Path(__file__).resolve()
-PROJECT_ROOT = None
+cwd = pathlib.Path.cwd()
 
-# First, search upward from the test file location.
+src_candidates = []
+
+# From the test file location and its parents
 for parent in [HERE.parent, *HERE.parents]:
-    if (parent / "src" / "main.py").exists():
-        PROJECT_ROOT = parent
-        break
+    src_candidates.append(parent / "src")
 
-# If not found (e.g., when the runner relocates the test file), search from CWD.
-if PROJECT_ROOT is None:
-    cwd = pathlib.Path.cwd()
-    for parent in [cwd, *cwd.parents]:
-        if (parent / "src" / "main.py").exists():
-            PROJECT_ROOT = parent
-            break
+# From the working directory and its parents
+for parent in [cwd, *cwd.parents]:
+    src_candidates.append(parent / "src")
 
-if PROJECT_ROOT is None:
-    raise RuntimeError("Could not locate src/main.py relative to tests or cwd")
+SRC_DIR = next((p for p in src_candidates if (p / "main.py").exists()), None)
 
-# Ensure the project root is first on sys.path so `import src.main` works.
-sys.path.insert(0, str(PROJECT_ROOT))
+if SRC_DIR is None:
+    raise RuntimeError("Could not locate src/main.py for imports")
+
+# Ensure the src directory is on sys.path
+sys.path.insert(0, str(SRC_DIR.parent))
 
 try:
     from src.main import Calculator
 except ModuleNotFoundError:
-    # Absolute import failed; load directly from the located file.
-    main_path = PROJECT_ROOT / "src" / "main.py"
+    # Fallback: load main.py directly
+    main_path = SRC_DIR / "main.py"
     spec = importlib.util.spec_from_file_location("src.main", main_path)
     module = importlib.util.module_from_spec(spec)
     assert spec and spec.loader  # guard for type checkers
