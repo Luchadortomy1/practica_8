@@ -1,9 +1,9 @@
 import pytest
-from src.main import Calculator
+from src.main import calculator
 
 
 def test_sum():
-    assert Calculator().sum(2, 2) == 4
+    assert calculator().sum(2, 2) == 4
 
 
 def test_subtract():
